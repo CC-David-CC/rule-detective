@@ -6,10 +6,21 @@ test("generated rules have balanced fitting and non-fitting examples", () => {
   for (let difficulty = 1; difficulty <= 3; difficulty++) {
     for (let seed = 0; seed < 50; seed++) {
       const session = new RuleDetectiveSession(`rule-${difficulty}-${seed}`, difficulty);
-      assert.equal(session.examples.length, 4);
+      assert.equal(session.examples.length, difficulty === 3 ? 5 : 4);
       assert.equal(session.examples.filter(example => example.fits).length, 2);
-      assert.equal(session.examples.filter(example => !example.fits).length, 2);
+      assert.equal(session.examples.filter(example => !example.fits).length, difficulty === 3 ? 3 : 2);
     }
+  }
+});
+
+test("difficulty three includes a near-miss non-fitting example", () => {
+  for (let seed = 0; seed < 40; seed++) {
+    const session = new RuleDetectiveSession(`near-miss-${seed}`, 3);
+    const near = session.examples.filter(example => !example.fits).find(example =>
+      session.rule.filter(predicate => predicate.operator === "eq"
+        ? example.card[predicate.attribute] === predicate.value
+        : example.card[predicate.attribute] !== predicate.value).length === 1);
+    assert.ok(near, "a near-miss example must be present");
   }
 });
 

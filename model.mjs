@@ -35,7 +35,7 @@ export class RuleDetectiveSession {
     if (!integer(difficulty, 1, 3)) throw Error("Difficulty must be 1, 2, or 3.");
     const rng = new SeededRng(seed);
     const rule = makeRule(difficulty, rng);
-    const examples = makeExamples(rule, rng);
+    const examples = makeExamples(rule, rng, difficulty);
     const state = {
       version: RULE_DETECTIVE_CONTENT_VERSION,
       seed: String(seed),
@@ -126,7 +126,7 @@ export class RuleDetectiveSession {
 }
 
 function makeRule(difficulty, rng) {
-  const count = difficulty === 1 ? 1 : rng.int(1, Math.min(2, difficulty));
+  const count = difficulty === 1 ? 1 : 2;
   return rng.shuffle(ATTRIBUTE_NAMES).slice(0, count).map(attribute => {
     const values = ATTRIBUTES[attribute];
     return {
@@ -141,7 +141,7 @@ function randomCard(rng) {
   return Object.fromEntries(ATTRIBUTE_NAMES.map(attribute => [attribute, rng.pick(ATTRIBUTES[attribute])]));
 }
 
-function makeExamples(rule, rng) {
+function makeExamples(rule, rng, difficulty) {
   const examples = [];
   const seen = new Set();
   for (let count = 0; count < 100 && examples.length < 4; count++) {
@@ -155,13 +155,32 @@ function makeExamples(rule, rng) {
     }
   }
   if (examples.filter(example => example.fits).length !== 2) throw Error("Could not generate balanced rule examples.");
+  if (difficulty === 3) {
+    const seenCards = new Set(examples.map(example => JSON.stringify(example.card)));
+    let nearMiss = null;
+    for (let count = 0; count < 200 && !nearMiss; count++) {
+      const card = randomCard(rng);
+      if (seenCards.has(JSON.stringify(card))) continue;
+      if (!ruleMatches(rule, card) && matchedPredicateCount(rule, card) === 1) nearMiss = {card, fits: false};
+    }
+    if (!nearMiss) throw Error("Could not generate a near-miss rule example.");
+    examples.push(nearMiss);
+  }
   return rng.shuffle(examples);
 }
 
 function ruleMatches(rule, card) {
-  return rule.every(predicate => predicate.operator === "eq"
+  return rule.every(predicate => predicateMatches(predicate, card));
+}
+
+function predicateMatches(predicate, card) {
+  return predicate.operator === "eq"
     ? card[predicate.attribute] === predicate.value
-    : card[predicate.attribute] !== predicate.value);
+    : card[predicate.attribute] !== predicate.value;
+}
+
+function matchedPredicateCount(rule, card) {
+  return rule.filter(predicate => predicateMatches(predicate, card)).length;
 }
 
 function canonicalRule(rule) {
@@ -193,7 +212,7 @@ function validatePayload(state) {
     typeof state.seed !== "string" || !integer(state.rngState, 0, 0xffffffff) || !integer(state.difficulty, 1, 3) ||
     !oneOf(state.phase, ["play", "revealed", "done"]) || !integer(state.budget, 0, 5) ||
     !integer(state.score, 0, 1000) || !integer(state.stars, 0, 3) ||
-    !Array.isArray(state.examples) || state.examples.length !== 4 ||
+    !Array.isArray(state.examples) || state.examples.length !== (state.difficulty === 3 ? 5 : 4) ||
     !Array.isArray(state.tested) || state.tested.length > 5 ||
     !Array.isArray(state.guesses) || state.guesses.length > 3) throw Error("Invalid Rule Detective snapshot.");
   validateRule(state.rule, state.difficulty);
@@ -203,6 +222,8 @@ function validatePayload(state) {
     if (example.fits !== ruleMatches(state.rule, example.card)) throw Error("Incorrect rule example.");
   }
   if (state.examples.filter(example => example.fits).length !== 2) throw Error("Unbalanced rule examples.");
+  if (state.difficulty === 3 && !state.examples.some(example => !example.fits &&
+      matchedPredicateCount(state.rule, example.card) === 1)) throw Error("Missing near-miss rule example.");
   for (const entry of state.tested) {
     if (!exactKeys(entry, ["card", "fits"]) || typeof entry.fits !== "boolean") throw Error("Invalid tested card.");
     validateCard(entry.card);
