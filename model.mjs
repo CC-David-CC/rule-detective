@@ -11,7 +11,7 @@ import {
 import {makeLearningReport} from "../shared/experience.mjs";
 
 export const RULE_DETECTIVE_APP_ID = "rule-detective";
-export const RULE_DETECTIVE_CONTENT_VERSION = "rule-detective-core-1";
+export const RULE_DETECTIVE_CONTENT_VERSION = "rule-detective-core-2";
 export const ATTRIBUTES = {
   shape: ["circle", "square", "triangle"],
   color: ["red", "blue", "green"],
