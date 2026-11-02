@@ -1,0 +1,69 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {RuleDetectiveSession} from "../model.mjs";
+
+test("generated rules have balanced fitting and non-fitting examples", () => {
+  for (let difficulty = 1; difficulty <= 3; difficulty++) {
+    for (let seed = 0; seed < 50; seed++) {
+      const session = new RuleDetectiveSession(`rule-${difficulty}-${seed}`, difficulty);
+      assert.equal(session.examples.length, 4);
+      assert.equal(session.examples.filter(example => example.fits).length, 2);
+      assert.equal(session.examples.filter(example => !example.fits).length, 2);
+    }
+  }
+});
+
+test("card tests spend budget without changing the rule or examples", () => {
+  const session = new RuleDetectiveSession("tests", 2);
+  const rule = session.rule, examples = session.examples;
+  const card = structuredClone(examples[0].card);
+  const result = session.testCard(card);
+  assert.equal(result, examples.find(example => JSON.stringify(example.card) === JSON.stringify(card)).fits);
+  assert.equal(session.budget, 4);
+  assert.deepEqual(session.rule, rule);
+  assert.deepEqual(session.examples, examples);
+});
+
+test("a correct structured guess ends the round once", () => {
+  const session = new RuleDetectiveSession("correct", 3);
+  assert.equal(session.guess(session.rule), true);
+  assert.equal(session.phase, "done");
+  assert.ok(session.score >= 100);
+  assert.throws(() => session.guess(session.rule));
+});
+
+test("wrong guesses are bounded and reveal scores partial credit", () => {
+  const session = new RuleDetectiveSession("wrong", 1);
+  const wrong = [{attribute: "shape", operator: "eq", value: session.rule[0].value === "circle" ? "square" : "circle"}];
+  for (let count = 0; count < 3; count++) assert.equal(session.guess(wrong), false);
+  assert.throws(() => session.guess(wrong));
+  session.reveal();
+  assert.equal(session.phase, "revealed");
+  assert.ok(session.score >= 0);
+});
+
+test("seeded sessions and snapshots reproduce the exact rule", () => {
+  const one = new RuleDetectiveSession("snapshot-rule", 3);
+  const two = new RuleDetectiveSession("snapshot-rule", 3);
+  assert.deepEqual(one.state, two.state);
+  one.testCard(two.examples[0].card);
+  two.testCard(two.examples[0].card);
+  const restored = RuleDetectiveSession.fromSave(two.encodeSave());
+  assert.deepEqual(restored.state, two.state);
+  assert.deepEqual(restored.rule, one.rule);
+});
+
+test("malformed grammar, changed examples, and invalid budgets are rejected", () => {
+  const session = new RuleDetectiveSession("invalid-rule", 3);
+  const valid = JSON.parse(session.encodeSave());
+  for (const mutate of [
+    value => { value.payload.rule[0].attribute = "texture"; },
+    value => { value.payload.examples[0].fits = !value.payload.examples[0].fits; },
+    value => { value.payload.budget = 4; },
+    value => { value.payload.difficulty = 5; },
+  ]) {
+    const broken = structuredClone(valid);
+    mutate(broken);
+    assert.throws(() => RuleDetectiveSession.fromSave(JSON.stringify(broken)));
+  }
+});
