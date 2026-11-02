@@ -8,6 +8,7 @@ import {
   oneOf,
   plainObject,
 } from "../shared/core.mjs";
+import {makeLearningReport} from "../shared/experience.mjs";
 
 export const RULE_DETECTIVE_APP_ID = "rule-detective";
 export const RULE_DETECTIVE_CONTENT_VERSION = "rule-detective-core-1";
@@ -88,6 +89,22 @@ export class RuleDetectiveSession {
 
   get state() {
     return clone(this.#state);
+  }
+
+  get report() {
+    return makeLearningReport({
+      appId: RULE_DETECTIVE_APP_ID,
+      audience: "grade-3-5",
+      phase: this.#state.phase,
+      stars: this.#state.stars,
+      score: this.#state.score,
+      firstTry: this.#state.phase === "done" && this.#state.guesses.length === 1 ? 1 : 0,
+      attempts: this.#state.tested.length + this.#state.guesses.length,
+      hintsUsed: 0,
+      remaining: this.#state.budget,
+      objectives: ["Test cards and express the hidden attribute rule."],
+      details: {budget: this.#state.budget, tested: this.#state.tested.length, guesses: this.#state.guesses.length},
+    });
   }
 
   testCard(card) {
