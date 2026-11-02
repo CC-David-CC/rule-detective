@@ -24,6 +24,19 @@ test("difficulty three includes a near-miss non-fitting example", () => {
   }
 });
 
+test("hints reveal one real rule predicate and are bounded", () => {
+  const session = new RuleDetectiveSession("hints", 3);
+  const first = session.hint();
+  assert.ok(first);
+  assert.ok(session.rule.some(predicate => JSON.stringify([predicate.attribute, predicate.operator, predicate.value]) ===
+    JSON.stringify([first.attribute, first.operator, first.value])));
+  const second = session.hint();
+  assert.ok(second);
+  assert.notDeepEqual(second, first);
+  assert.equal(session.hint(), null);
+  assert.equal(session.report.hintsUsed, 2);
+});
+
 test("card tests spend budget without changing the rule or examples", () => {
   const session = new RuleDetectiveSession("tests", 2);
   const rule = session.rule, examples = session.examples;
@@ -72,6 +85,8 @@ test("malformed grammar, changed examples, and invalid budgets are rejected", ()
     value => { value.payload.examples[0].fits = !value.payload.examples[0].fits; },
     value => { value.payload.budget = 4; },
     value => { value.payload.difficulty = 5; },
+    value => { value.payload.hintsUsed = value.payload.hintReveals.length + 1; },
+    value => { value.payload.hintReveals.push({attribute: "texture", operator: "eq", value: "red"}); },
   ]) {
     const broken = structuredClone(valid);
     mutate(broken);
