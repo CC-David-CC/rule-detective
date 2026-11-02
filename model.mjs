@@ -47,6 +47,8 @@ export class RuleDetectiveSession {
       examples,
       tested: [],
       guesses: [],
+      hintReveals: [],
+      hintsUsed: 0,
       budget: 5,
       score: 0,
       stars: 0,
@@ -87,6 +89,10 @@ export class RuleDetectiveSession {
     return this.#state.stars;
   }
 
+  get hintsUsed() {
+    return this.#state.hintsUsed;
+  }
+
   get state() {
     return clone(this.#state);
   }
@@ -100,10 +106,16 @@ export class RuleDetectiveSession {
       score: this.#state.score,
       firstTry: this.#state.phase === "done" && this.#state.guesses.length === 1 ? 1 : 0,
       attempts: this.#state.tested.length + this.#state.guesses.length,
-      hintsUsed: 0,
+      hintsUsed: this.#state.hintsUsed,
       remaining: this.#state.budget,
       objectives: ["Test cards and express the hidden attribute rule."],
-      details: {budget: this.#state.budget, tested: this.#state.tested.length, guesses: this.#state.guesses.length},
+      details: {
+        budget: this.#state.budget,
+        tested: this.#state.tested.length,
+        guesses: this.#state.guesses.length,
+        hintsUsed: this.#state.hintsUsed,
+        difficulty: this.#state.difficulty,
+      },
     });
   }
 
@@ -127,6 +139,19 @@ export class RuleDetectiveSession {
     this.#state.score = 100 + this.#state.budget * 20;
     this.#state.stars = this.#state.budget >= 3 ? 3 : this.#state.budget >= 1 ? 2 : 1;
     return true;
+  }
+
+  hint() {
+    if (this.#state.phase !== "play") return null;
+    if (this.#state.hintsUsed >= 2) return null;
+    const hidden = this.#state.rule.filter(predicate =>
+      !this.#state.hintReveals.some(revealed => canonicalPredicate(revealed) === canonicalPredicate(predicate)));
+    if (!hidden.length) return null;
+    const predicate = this.#rng.pick(hidden);
+    this.#state.hintReveals.push(clone(predicate));
+    this.#state.hintsUsed++;
+    this.#state.rngState = this.#rng.state;
+    return clone(predicate);
   }
 
   reveal() {
@@ -205,6 +230,10 @@ function canonicalRule(rule) {
     `${left.attribute}:${left.operator}:${left.value}`.localeCompare(`${right.attribute}:${right.operator}:${right.value}`)));
 }
 
+function canonicalPredicate(predicate) {
+  return JSON.stringify([predicate.attribute, predicate.operator, predicate.value]);
+}
+
 function validateCard(card) {
   if (!exactKeys(card, CARD_KEYS)) throw Error("Invalid card.");
   for (const attribute of ATTRIBUTE_NAMES) {
@@ -225,13 +254,15 @@ function validateRule(rule, difficulty) {
 
 function validatePayload(state) {
   if (!exactKeys(state, ["version", "seed", "rngState", "difficulty", "phase", "rule", "examples", "tested",
-    "guesses", "budget", "score", "stars"]) || state.version !== RULE_DETECTIVE_CONTENT_VERSION ||
+    "guesses", "hintReveals", "hintsUsed", "budget", "score", "stars"]) || state.version !== RULE_DETECTIVE_CONTENT_VERSION ||
     typeof state.seed !== "string" || !integer(state.rngState, 0, 0xffffffff) || !integer(state.difficulty, 1, 3) ||
     !oneOf(state.phase, ["play", "revealed", "done"]) || !integer(state.budget, 0, 5) ||
     !integer(state.score, 0, 1000) || !integer(state.stars, 0, 3) ||
     !Array.isArray(state.examples) || state.examples.length !== (state.difficulty === 3 ? 5 : 4) ||
     !Array.isArray(state.tested) || state.tested.length > 5 ||
-    !Array.isArray(state.guesses) || state.guesses.length > 3) throw Error("Invalid Rule Detective snapshot.");
+    !Array.isArray(state.guesses) || state.guesses.length > 3 ||
+    !Array.isArray(state.hintReveals) || state.hintReveals.length > 2 ||
+    !integer(state.hintsUsed, 0, 2)) throw Error("Invalid Rule Detective snapshot.");
   validateRule(state.rule, state.difficulty);
   for (const example of state.examples) {
     if (!exactKeys(example, ["card", "fits"]) || typeof example.fits !== "boolean") throw Error("Invalid rule example.");
@@ -247,5 +278,11 @@ function validatePayload(state) {
     if (entry.fits !== ruleMatches(state.rule, entry.card)) throw Error("Incorrect tested card.");
   }
   for (const guess of state.guesses) validateRule(guess, state.difficulty);
+  if (state.hintsUsed !== state.hintReveals.length) throw Error("Hint state does not match hint count.");
+  for (const predicate of state.hintReveals) {
+    if (!state.rule.some(rulePredicate => canonicalPredicate(rulePredicate) === canonicalPredicate(predicate))) {
+      throw Error("Revealed predicate is not part of the rule.");
+    }
+  }
   if (state.budget !== 5 - state.tested.length) throw Error("Invalid test budget.");
 }
