@@ -7,8 +7,8 @@ import {
   integer,
   oneOf,
   plainObject,
-} from "../shared/core.mjs";
-import {makeLearningReport} from "../shared/experience.mjs";
+} from "@webos/learning-game-core/core";
+import {makeLearningReport} from "@webos/learning-game-core/experience";
 
 export const RULE_DETECTIVE_APP_ID = "rule-detective";
 export const RULE_DETECTIVE_CONTENT_VERSION = "rule-detective-core-2";
