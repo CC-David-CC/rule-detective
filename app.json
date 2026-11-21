@@ -1,0 +1,15 @@
+{
+  "id": "rule-detective",
+  "name": "Rule Detective",
+  "category": "Games",
+  "version": "0.1.0",
+  "description": "Deduce hidden card attribute rules using visual examples, hypothesis card tests, and structured rule formulas.",
+  "entry": "index.mjs",
+  "window": {
+    "title": "Rule Detective",
+    "width": 900,
+    "height": 660,
+    "minWidth": 360,
+    "minHeight": 420
+  }
+}
