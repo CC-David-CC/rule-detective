@@ -45,7 +45,7 @@ test("mount contract returns element and disposes cleanly", () => {
 
   const instance = mount(host);
   assert.ok(instance.element);
-  assert.equal(instance.element.className, "rule-detective-app");
+  assert.equal(instance.element.className, "window-content rule-detective-app");
   assert.ok(instance.session);
   assert.equal(instance.session.budget, 5);
 

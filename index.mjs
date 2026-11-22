@@ -33,7 +33,7 @@ function createElement(host, tag, className, text) {
 }
 
 export function mount(host, options = {}) {
-  const root = createElement(host, 'div', 'rule-detective-app');
+  const root = createElement(host, 'div', 'window-content rule-detective-app');
 
   let difficulty = options.difficulty || 2;
   let session = new RuleDetectiveSession(`detective-${Date.now()}`, difficulty);
