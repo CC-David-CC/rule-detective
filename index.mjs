@@ -1,3 +1,4 @@
+import {connectGameFiles} from '@webos/learning-game-core/workspace';
 import {RuleDetectiveSession, ATTRIBUTES} from './model.mjs';
 import {computeLayout} from './layout.mjs';
 
@@ -250,6 +251,20 @@ export function mount(host, options = {}) {
     renderWorkbench();
   }
 
+  const files = connectGameFiles(host, {
+    header,
+    id: 'rule-detective',
+    title: 'Rule Detective',
+    serialize: () => session.encodeSave(),
+    restore(snapshot) {
+      session = RuleDetectiveSession.fromSave(snapshot);
+      difficulty = session.state.difficulty;
+      builderAttribute = 'shape';
+      builderValue = 'circle';
+      render();
+    },
+  });
+
   render();
 
   if (typeof ResizeObserver !== 'undefined' && root.getBoundingClientRect) {
@@ -263,8 +278,11 @@ export function mount(host, options = {}) {
 
   return {
     element: root,
-    session,
+    get session() { return session; },
+    ready: files.ready,
+    requestClose: files.requestClose,
     dispose() {
+      files.dispose?.();
       disposed = true;
       resizeObserver?.disconnect();
       resizeObserver = null;
