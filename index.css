@@ -186,47 +186,43 @@
   justify-content: flex-end;
 }
 
-/* Tier 1: Phone (< 768px) */
-@media (max-width: 768px) {
-  .rule-detective-app {
-    padding: 8px;
-    gap: 8px;
-  }
-  .detective-main {
-    flex-direction: column;
-  }
-  .detective-clues-section {
-    flex: 0 0 auto;
-    max-height: 240px;
-  }
+.rule-detective-app[data-tier="phone"] {
+  padding: 8px;
+  gap: 8px;
 }
 
-/* Tier 2: 1080p Desktop (1024px to 2559px) */
-@media (min-width: 1024px) and (max-width: 2559px) {
-  .detective-clues-section {
-    flex: 0 0 380px;
-  }
-  .detective-workbench {
-    flex: 1;
-  }
+.rule-detective-app[data-tier="phone"] .detective-main {
+  flex-direction: column;
 }
 
-/* Tier 3: 4K UHD (>= 2560px) */
-@media (min-width: 2560px) {
-  :root {
-    --detective-touch-target: 56px;
-  }
-  .rule-detective-app {
-    padding: 24px;
-    gap: 20px;
-    font-size: 1.3rem;
-  }
-  .detective-title {
-    font-size: 2rem;
-  }
-  .detective-select,
-  .detective-btn {
-    font-size: 1.25rem;
-    padding: 12px;
-  }
+.rule-detective-app[data-tier="phone"] .detective-clues-section {
+  flex: 0 0 auto;
+  max-height: 240px;
+}
+
+.rule-detective-app[data-tier="desktop"] .detective-clues-section {
+  flex: 0 0 380px;
+}
+
+.rule-detective-app[data-tier="desktop"] .detective-workbench {
+  flex: 1;
+}
+
+.rule-detective-app[data-tier="4k"] {
+  --detective-touch-target: 56px;
+}
+
+.rule-detective-app[data-tier="4k"] {
+  padding: 24px;
+  gap: 20px;
+  font-size: 1.3rem;
+}
+
+.rule-detective-app[data-tier="4k"] .detective-title {
+  font-size: 2rem;
+}
+
+.rule-detective-app[data-tier="4k"] .detective-btn {
+  font-size: 1.25rem;
+  padding: 12px;
 }
