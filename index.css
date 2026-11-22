@@ -192,7 +192,12 @@
 }
 
 .rule-detective-app[data-tier="phone"] .detective-main {
+  flex: 0 0 auto;
   flex-direction: column;
+}
+
+.rule-detective-app[data-tier="phone"] .detective-workbench {
+  flex: 0 0 auto;
 }
 
 .rule-detective-app[data-tier="phone"] .detective-clues-section {
